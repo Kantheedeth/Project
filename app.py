@@ -33,7 +33,8 @@ row = examples.iloc[idx].copy()
 actual = bool(row.pop("Revenue"))
 
 st.write("Edit the session information, then click **Predict**. Other fields retain the selected example's values.")
-with st.form("predict"):
+# Changing examples must also reset any edits to the previous session.
+with st.form(f"predict_{idx}"):
     a, b, c = st.columns(3)
     with a:
         row["ProductRelated"] = st.number_input("Product pages visited", min_value=0, value=int(row["ProductRelated"]))
