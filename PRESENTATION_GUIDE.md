@@ -77,14 +77,22 @@ Checkpoints while rehearsing: slide 3 ends **2:35**, slide 7 ends **6:25**, slid
 
 The demo is worth 5% and proves the model is real. Rehearse it until it is boring.
 
-**Use these three examples in this order.** They are already verified against the saved model — do not pick at random on camera.
+**Use these three examples in this order.** Scores are verified against the saved model — do not pick at random on camera. Read the session's behaviour off the screen before you click Predict; that is what makes the score land.
 
-| Step | Time | Example | Model score | Actual outcome | What to say |
+| Step | Time | Example | App shows | Actual | Session behaviour visible on screen |
 |---|---:|---|---:|---|---|
-| 1 | 0:00–0:30 | **27** | 0.68 | bought | "The model flagged this session as high intent, and this shopper did buy." |
-| 2 | 0:30–1:00 | **9** | 0.01 | did not buy | "And it is confident this one was never going to convert. That is the ranking working at both ends." |
-| 3 | 1:00–1:40 | **8** | 0.64 | **did not buy** | "This is the whole point of the product. High intent, no purchase. This is the session our analyst opens first." |
-| 4 | 1:40–1:50 | — | — | — | Closing caveat, then move to slide 13. |
+| 1 | 0:00–0:35 | **27** | **68.4%** | bought | 12 product pages, 12.6 min, 0% bounce, new visitor |
+| 2 | 0:35–1:00 | **9** | **0.5%** | did not buy | 1 product page, 0 seconds, 20% bounce, returning |
+| 3 | 1:00–1:40 | **8** | **63.9%** | **did not buy** | **38 product pages, 64.5 min, 0% bounce, 0.27% exit** |
+| 4 | 1:40–1:50 | — | — | — | Closing caveat, then slide 13 |
+
+What to say at each step:
+
+1. **Example 27 — the model catches a buyer.** "Twelve product pages, nearly thirteen minutes, never bounced. The model gives it 68%, and this shopper did buy."
+2. **Example 9 — the model ignores a non-starter.** "One product page, zero seconds, bounced. Half a percent. The ranking works at both ends, so analysts are not handed noise."
+3. **Example 8 — the reason the product exists.** "Thirty-eight product pages. Sixty-four minutes on site. A zero percent bounce rate. The model scores it 64% — and this person did not buy. That is not a model failure, that is the single most interesting session in the dataset. Somebody spent an hour shopping and left empty-handed. **This is the session our analyst opens first.**"
+
+Step 3 is the emotional peak of the talk. Pause after "did not buy" before explaining. Do not apologise for the prediction being "wrong" — the whole product is built on finding exactly these sessions.
 
 Say at the start that all three are held-out sessions the model never trained on. Example 8 is the strongest moment in the talk — it turns a "wrong" prediction into the product's reason for existing, so land it deliberately rather than apologising for it.
 
