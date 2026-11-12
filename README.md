@@ -1,5 +1,17 @@
 # SessionSignal: online purchase intent proof of concept
 
+DES423 group assignment — predictive modeling pitch.
+
+| Student ID | Name | Main contribution |
+|---|---|---|
+| 6622782298 | Sirawich Narakulsookpipat | Problem research and framing |
+| 6622780342 | Chaitawat Boonkitticharoen | Dataset audit and target definition |
+| 6622782215 | Bhuchi Kumprakob | Exploratory data analysis |
+| 6622780276 | Nonthaphat Chuathong | Evaluation design and model selection |
+| 6622770657 | Kamin Sirisuwapong | PyCaret comparison and hyperparameter tuning |
+| 6622772455 | Poonnawit Wongprateepwilai | Results analysis and business solution |
+| 6622790267 | Choltawat Jullakasevi | Streamlit app, demonstration and limitations |
+
 This project uses the supplied `online_shoppers_intention.csv` from the [UCI Online Shoppers Purchasing Intention Dataset](https://archive.ics.uci.edu/dataset/468/online+shoppers+purchasing+intention+dataset). It predicts whether a completed browsing session ended in a purchase (`Revenue`).
 
 The proposed user is an ecommerce conversion analyst. The business question is which completed sessions deserve investigation when analyst time is limited. A proposed workflow ranks sessions by model score, examines high-score sessions with no recorded purchase, and reviews user paths or support logs where those are available. The analyst can then form a checkout or support hypothesis and test a change in an A/B experiment. The current demo implements individual session scoring; batch ranking, investigation tools and experiments are proposed next steps. The model does not establish causes of abandonment or a revenue increase.
@@ -9,13 +21,15 @@ The proposed user is an ecommerce conversion analyst. The business question is w
 Use Python 3.10 or 3.11. From this folder:
 
 ```bash
-python3.10 -m venv .venv
+python3.11 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python train.py
 .venv/bin/streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit. Select a held-out example, edit some inputs, and click **Predict purchase probability**. The app shows the recorded outcome for the original example so judges can compare prediction and reality. The **13-slide** deck is [presentation.html](presentation.html); open it in a browser and use the arrow keys or click to advance. Browser print can produce a PDF. The **14-minute** run of show includes a two-minute demonstration and follows the latest 7–8 member, in-session assignment. Thai speaker notes, rehearsal checkpoints and suggested work areas are in [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md). Presenter numbers describe a suggested speaking allocation that the team can adapt to actual contributions.
+Open the local URL printed by Streamlit. Select a held-out example and click **Predict purchase probability**. The app shows the recorded outcome for the original example so judges can compare prediction and reality.
+
+The **15-slide** deck is [presentation.html](presentation.html); open it in a browser and use the arrow keys or click to advance. Browser print produces a PDF. The submission is a **YouTube video, 10–15 minutes at 1× speed**, with the demonstration included; the run of show is timed to **14:00**. Speaker allocation, Thai speaker notes, the fixed demo script, recording instructions and a rehearsal checklist are in [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
 
 The already trained model and results are in `artifacts/`. You can run the app without retraining after installing dependencies. Results are deterministic with seed 42, subject to library and platform versions.
 
