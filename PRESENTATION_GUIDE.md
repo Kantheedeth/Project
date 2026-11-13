@@ -77,7 +77,7 @@ Checkpoints while rehearsing: slide 3 ends **2:35**, slide 7 ends **6:25**, slid
 
 The demo is worth 5% and proves the model is real. Rehearse it until it is boring.
 
-**Use these three examples in this order.** Scores are verified against the saved model — do not pick at random on camera. Read the session's behaviour off the screen before you click Predict; that is what makes the score land.
+**Use these three sessions in this order.** Pick each one from the **Choose a held-out example session** dropdown. Scores are verified against the saved model — do not pick at random on camera. The score updates live — there is no button to press. Read the session's behaviour off the controls **before** you point at the score; that is what makes the number land.
 
 | Step | Time | Example | App shows | Actual | Session behaviour visible on screen |
 |---|---:|---|---:|---|---|
@@ -96,7 +96,7 @@ Step 3 is the emotional peak of the talk. Pause after "did not buy" before expla
 
 Say at the start that all three are held-out sessions the model never trained on. Example 8 is the strongest moment in the talk — it turns a "wrong" prediction into the product's reason for existing, so land it deliberately rather than apologising for it.
 
-If you want to show the interactive side, edit one input on example 27 and predict again, but say clearly that the session is now hypothetical and the recorded outcome no longer describes it. Do not promise the score will move in a particular direction.
+To show the interactive side, drag the **Product pages viewed** slider on example 8 down to about 2 — the score falls from 64% to roughly 46% and the verdict flips to *correctly set aside*. Say clearly that the session is now hypothetical and the recorded outcome no longer describes it. Press **↺ Reset** to restore the original values.
 
 Close by noting that one case proves nothing on its own — the reported metrics summarise 2,441 held-out sessions — and that the probability is an estimate whose calibration is future work.
 

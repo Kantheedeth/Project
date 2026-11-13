@@ -80,77 +80,83 @@ tab_predict, tab_how, tab_results, tab_about = st.tabs(
 
 
 # ───────────────────────────── Predict ─────────────────────────────
+
+
 with tab_predict:
     st.markdown(
-        "Pick a **held-out** shopping session — one the model never saw while training — "
-        "and estimate how likely that visitor was to buy."
+        "Pick a **held-out** shopping session — one the model never saw while training. "
+        "Every control is live: change one and the estimate updates instantly."
     )
 
-    idx = st.selectbox(
-        "Choose a held-out example session",
-        range(len(examples)),
-        index=26,
-        format_func=lambda i: f"Example {i + 1}",
-    )
+    if "nonce" not in st.session_state:
+        st.session_state.nonce = 0
+
+    choose, clear = st.columns([4, 1], gap="medium")
+    with choose:
+        idx = st.selectbox(
+            "Choose a held-out example session",
+            range(len(examples)), index=26,
+            format_func=lambda i: f"Example {i + 1}",
+        )
+    with clear:
+        st.markdown('<div style="height:1.85rem"></div>', unsafe_allow_html=True)
+        if st.button("↺ Reset edits", width="stretch",
+                     help="Restore this session's original values"):
+            st.session_state.nonce += 1
+            st.rerun()
+
     row = examples.iloc[idx].copy()
     actual = bool(row.pop("Revenue"))
+    k = f"{idx}_{st.session_state.nonce}"      # fresh widgets per session and per reset
 
-    left, right = st.columns([1, 1.15], gap="large")
+    left, right = st.columns([1.15, 1], gap="large")
 
     with left:
-        st.markdown('<div class="ss-card"><h4>What this visitor did</h4>', unsafe_allow_html=True)
-        mins = row["ProductRelated_Duration"] / 60
-        for label, value in [
-            ("Product pages viewed", f"{int(row['ProductRelated'])}"),
-            ("Time on product pages", f"{mins:.1f} min"),
-            ("Bounce rate", f"{row['BounceRates'] * 100:.1f}%"),
-            ("Exit rate", f"{row['ExitRates'] * 100:.1f}%"),
-            ("Visitor type", str(row["VisitorType"]).replace("_", " ")),
-            ("Month", str(row["Month"])),
-            ("Weekend", "Yes" if row["Weekend"] else "No"),
-        ]:
-            st.markdown(
-                f'<div class="ss-kv"><span>{label}</span><span>{value}</span></div>',
-                unsafe_allow_html=True,
-            )
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(f"**What visitor #{idx + 1} did**")
+        a, b = st.columns(2, gap="medium")
+        with a:
+            row["ProductRelated"] = st.slider(
+                "Product pages viewed", 0, 210, int(row["ProductRelated"]), key=f"pr_{k}")
+            row["BounceRates"] = st.slider(
+                "Bounce rate (%)", 0.0, 20.0, round(float(row["BounceRates"]) * 100, 2),
+                step=0.1, key=f"br_{k}") / 100
+            visitors = ["Returning_Visitor", "New_Visitor", "Other"]
+            row["VisitorType"] = st.radio(
+                "Visitor type", visitors, index=visitors.index(row["VisitorType"]),
+                format_func=lambda v: v.replace("_", " "), key=f"vt_{k}")
+        with b:
+            row["ProductRelated_Duration"] = st.slider(
+                "Time on product pages (minutes)", 0.0, 160.0,
+                round(float(row["ProductRelated_Duration"]) / 60, 1), step=0.5,
+                key=f"prd_{k}") * 60
+            row["ExitRates"] = st.slider(
+                "Exit rate (%)", 0.0, 20.0, round(float(row["ExitRates"]) * 100, 2),
+                step=0.1, key=f"er_{k}") / 100
+            months = ["Feb", "Mar", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+            row["Month"] = st.selectbox(
+                "Month", months, index=months.index(row["Month"]), key=f"mo_{k}")
+            row["Weekend"] = st.toggle("Weekend", value=bool(row["Weekend"]), key=f"we_{k}")
 
-        with st.expander("✏️  Change the session (optional)"):
-            st.caption(
-                "Edits create a hypothetical visitor. The recorded outcome below belongs to the "
-                "original session and no longer describes it."
-            )
-            # Keying the form by example makes switching sessions clear any previous edits.
-            with st.form(f"predict_{idx}"):
-                c1, c2 = st.columns(2)
-                with c1:
-                    row["ProductRelated"] = st.number_input(
-                        "Product pages viewed", min_value=0, value=int(row["ProductRelated"]))
-                    row["ProductRelated_Duration"] = st.number_input(
-                        "Time on product pages (sec)", min_value=0.0,
-                        value=float(row["ProductRelated_Duration"]))
-                    row["Administrative"] = st.number_input(
-                        "Administrative pages", min_value=0, value=int(row["Administrative"]))
-                    row["Informational"] = st.number_input(
-                        "Informational pages", min_value=0, value=int(row["Informational"]))
-                with c2:
-                    row["BounceRates"] = st.number_input(
-                        "Bounce rate", min_value=0.0, max_value=1.0,
-                        value=float(row["BounceRates"]), format="%.4f")
-                    row["ExitRates"] = st.number_input(
-                        "Exit rate", min_value=0.0, max_value=1.0,
-                        value=float(row["ExitRates"]), format="%.4f")
-                    visitors = ["Returning_Visitor", "New_Visitor", "Other"]
-                    row["VisitorType"] = st.selectbox(
-                        "Visitor type", visitors, index=visitors.index(row["VisitorType"]))
-                    months = ["Feb", "Mar", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                    row["Month"] = st.selectbox("Month", months, index=months.index(row["Month"]))
-                row["Weekend"] = st.checkbox("Weekend", value=bool(row["Weekend"]))
-                for key in ["Administrative_Duration", "Informational_Duration", "SpecialDay"]:
-                    row[key] = st.number_input(key, min_value=0.0, value=float(row[key]))
-                for key in ["OperatingSystems", "Browser", "Region", "TrafficType"]:
-                    row[key] = st.number_input(key, min_value=1, value=int(row[key]))
-                st.form_submit_button("Apply changes", type="secondary")
+        with st.expander("Other inputs (rarely needed)"):
+            c, d = st.columns(2, gap="medium")
+            with c:
+                row["Administrative"] = st.number_input(
+                    "Administrative pages", 0, value=int(row["Administrative"]), key=f"ad_{k}")
+                row["Informational"] = st.number_input(
+                    "Informational pages", 0, value=int(row["Informational"]), key=f"in_{k}")
+                row["SpecialDay"] = st.number_input(
+                    "Special day", 0.0, 1.0, value=float(row["SpecialDay"]), key=f"sd_{k}")
+                row["Administrative_Duration"] = st.number_input(
+                    "Administrative seconds", 0.0,
+                    value=float(row["Administrative_Duration"]), key=f"add_{k}")
+            with d:
+                row["Informational_Duration"] = st.number_input(
+                    "Informational seconds", 0.0,
+                    value=float(row["Informational_Duration"]), key=f"ind_{k}")
+                for code, label in [("OperatingSystems", "Operating system"), ("Browser", "Browser"),
+                                    ("Region", "Region"), ("TrafficType", "Traffic source")]:
+                    row[code] = st.number_input(
+                        label, 1, value=int(row[code]), key=f"{code}_{k}")
 
     with right:
         p = float(model.predict_proba(pd.DataFrame([row]))[0, 1])
@@ -169,34 +175,31 @@ with tab_predict:
             st.markdown(
                 '<div class="ss-flag hit"><b>✅ The model caught a buyer.</b><br>'
                 "It scored this session as high intent, and this visitor really did buy.</div>",
-                unsafe_allow_html=True,
-            )
+                unsafe_allow_html=True)
         elif not predicted_buy and not actual:
             st.markdown(
                 '<div class="ss-flag miss"><b>✅ Correctly set aside.</b><br>'
                 "Low score, and this visitor did not buy. The analyst never has to open it.</div>",
-                unsafe_allow_html=True,
-            )
+                unsafe_allow_html=True)
         elif predicted_buy and not actual:
             st.markdown(
                 '<div class="ss-flag look"><b>🔎 Worth investigating.</b><br>'
                 "This visitor behaved like a buyer but left with nothing. "
                 "<b>This is exactly the session SessionSignal exists to surface</b> — "
                 "something may have gone wrong for them.</div>",
-                unsafe_allow_html=True,
-            )
+                unsafe_allow_html=True)
         else:
             st.markdown(
                 '<div class="ss-flag miss"><b>↪️ A quiet buyer the model missed.</b><br>'
                 "Low score, but this visitor did buy. No model catches every case — "
                 "the reported metrics summarise all 2,441 test sessions.</div>",
-                unsafe_allow_html=True,
-            )
+                unsafe_allow_html=True)
 
         st.markdown(
-            f'<div class="ss-note">Recorded outcome for the original session: '
-            f'<b>{"purchase" if actual else "no purchase"}</b>. '
-            f"A score is an estimate of likelihood, not a statement about this individual.</div>",
+            f'<div class="ss-note">Recorded outcome for the original session '
+            f'<b>#{idx + 1}</b>: <b>{"purchase" if actual else "no purchase"}</b>. '
+            "If you changed any control this is now a hypothetical visitor, and that "
+            "recorded outcome no longer describes them.</div>",
             unsafe_allow_html=True,
         )
 
