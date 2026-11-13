@@ -81,15 +81,15 @@ The demo is worth 5% and proves the model is real. Rehearse it until it is borin
 
 | Step | Time | Example | App shows | Actual | Session behaviour visible on screen |
 |---|---:|---|---:|---|---|
-| 1 | 0:00–0:35 | **27** | **68.4%** | bought | 12 product pages, 12.6 min, 0% bounce, new visitor |
-| 2 | 0:35–1:00 | **9** | **0.5%** | did not buy | 1 product page, 0 seconds, 20% bounce, returning |
-| 3 | 1:00–1:40 | **8** | **63.9%** | **did not buy** | **38 product pages, 64.5 min, 0% bounce, 0.27% exit** |
+| 1 | 0:00–0:35 | **27** | **68%** | bought | 12 product pages, 12.6 min, 0% bounce, new visitor |
+| 2 | 0:35–1:00 | **9** | **1%** | did not buy | 1 product page, 0 seconds, 20% bounce, returning |
+| 3 | 1:00–1:40 | **8** | **64%** | **did not buy** | **38 product pages, 64.5 min, 0% bounce, 0.27% exit** |
 | 4 | 1:40–1:50 | — | — | — | Closing caveat, then slide 13 |
 
 What to say at each step:
 
-1. **Example 27 — the model catches a buyer.** "Twelve product pages, nearly thirteen minutes, never bounced. The model gives it 68%, and this shopper did buy."
-2. **Example 9 — the model ignores a non-starter.** "One product page, zero seconds, bounced. Half a percent. The ranking works at both ends, so analysts are not handed noise."
+1. **Example 27 — the model catches a buyer.** "Twelve product pages, nearly thirteen minutes, never bounced. The model gives it 68%, and this shopper did buy. The app confirms it on screen: **the model caught a buyer**."
+2. **Example 9 — the model ignores a non-starter.** "One product page, zero seconds, bounced straight out. One percent. The ranking works at both ends, so analysts are not handed noise."
 3. **Example 8 — the reason the product exists.** "Thirty-eight product pages. Sixty-four minutes on site. A zero percent bounce rate. The model scores it 64% — and this person did not buy. That is not a model failure, that is the single most interesting session in the dataset. Somebody spent an hour shopping and left empty-handed. **This is the session our analyst opens first.**"
 
 Step 3 is the emotional peak of the talk. Pause after "did not buy" before explaining. Do not apologise for the prediction being "wrong" — the whole product is built on finding exactly these sessions.

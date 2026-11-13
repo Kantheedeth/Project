@@ -1,4 +1,4 @@
-"""Streamlit demonstration of the held-out shopping session classifier."""
+"""SessionSignal — Streamlit demonstration of the held-out shopping session classifier."""
 
 from pathlib import Path
 import json
@@ -10,60 +10,359 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "artifacts"
-st.set_page_config(page_title="SessionSignal demo", page_icon="🛒", layout="wide")
-st.title("SessionSignal")
-st.caption("Proof of concept: estimate whether a browsing session ends with a purchase")
+
+st.set_page_config(page_title="SessionSignal", page_icon="🛒", layout="wide")
+
+TEAL, INK, MUTED, SAND = "#008e87", "#122434", "#516477", "#d79032"
+
+st.markdown(
+    f"""
+    <style>
+      .block-container {{padding-top:2.2rem;padding-bottom:3rem;max-width:1180px}}
+      #MainMenu, footer {{visibility:hidden}}
+      .ss-head {{background:#102e3e;border-radius:14px;padding:1.5rem 1.8rem;margin-bottom:1.4rem}}
+      .ss-head h1 {{color:#fff;font-size:2.1rem;margin:0;letter-spacing:-.5px}}
+      .ss-head p {{color:#9fc6c4;margin:.35rem 0 0;font-size:1.02rem}}
+      .ss-card {{background:#f4f8f8;border-radius:12px;padding:1.1rem 1.3rem;margin-bottom:.9rem}}
+      .ss-card h4 {{margin:0 0 .6rem;font-size:.82rem;letter-spacing:.09em;
+                    text-transform:uppercase;color:{TEAL};font-weight:700}}
+      .ss-kv {{display:flex;justify-content:space-between;padding:.3rem 0;
+               border-bottom:1px solid #e2eceb;font-size:.95rem}}
+      .ss-kv:last-child {{border-bottom:none}}
+      .ss-kv span:last-child {{font-weight:700;color:{INK}}}
+      .ss-score {{font-size:4.2rem;font-weight:800;line-height:1;letter-spacing:-2px}}
+      .ss-bar {{height:16px;background:#dce7e9;border-radius:8px;overflow:hidden;margin:.7rem 0 .3rem}}
+      .ss-bar > i {{display:block;height:100%;border-radius:8px}}
+      .ss-note {{font-size:.86rem;color:{MUTED};line-height:1.5}}
+      .ss-flag {{border-radius:12px;padding:1rem 1.2rem;margin:.6rem 0;font-size:1rem;line-height:1.5}}
+      .ss-flag.hit  {{background:#e3f6ef;border-left:5px solid {TEAL}}}
+      .ss-flag.look {{background:#fdf3e3;border-left:5px solid {SAND}}}
+      .ss-flag.miss {{background:#eef2f5;border-left:5px solid #8da2ae}}
+      .ss-step {{display:flex;gap:.9rem;align-items:flex-start;margin:.55rem 0}}
+      .ss-step b {{color:{TEAL};font-size:1.05rem;min-width:1.4rem}}
+      .stTabs [data-baseweb="tab-list"] {{gap:.4rem}}
+      .stTabs [data-baseweb="tab"] {{padding:.55rem 1.1rem;font-weight:600}}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.markdown(
+    '<div class="ss-head"><h1>SessionSignal</h1>'
+    "<p>Which online shopping visits were close to a purchase — and which ones deserve a second look?</p></div>",
+    unsafe_allow_html=True,
+)
 
 if not (OUT / "purchase_model.joblib").exists():
     st.error("Run `python train.py` first to train and save the model.")
     st.stop()
 
+
 @st.cache_resource
 def load_model():
     return joblib.load(OUT / "purchase_model.joblib")
+
 
 @st.cache_data
 def load_data():
     return pd.read_csv(OUT / "demo_sessions.csv"), json.loads((OUT / "results.json").read_text())
 
+
 model = load_model()
 examples, report = load_data()
-idx = st.selectbox("Choose a held-out example session", range(len(examples)), format_func=lambda i: f"Example {i+1}")
-row = examples.iloc[idx].copy()
-actual = bool(row.pop("Revenue"))
+res = report["results"]
+chosen = report["chosen_model"]
+test = res[chosen]["test"]
 
-st.write("Edit the session information, then click **Predict**. Other fields retain the selected example's values.")
-# Changing examples must also reset any edits to the previous session.
-with st.form(f"predict_{idx}"):
-    a, b, c = st.columns(3)
-    with a:
-        row["ProductRelated"] = st.number_input("Product pages visited", min_value=0, value=int(row["ProductRelated"]))
-        row["ProductRelated_Duration"] = st.number_input("Time on product pages (seconds)", min_value=0.0, value=float(row["ProductRelated_Duration"]))
-        row["Administrative"] = st.number_input("Administrative pages visited", min_value=0, value=int(row["Administrative"]))
-    with b:
-        row["Informational"] = st.number_input("Informational pages visited", min_value=0, value=int(row["Informational"]))
-        row["BounceRates"] = st.number_input("Bounce rate", min_value=0.0, max_value=1.0, value=float(row["BounceRates"]), format="%.4f")
-        row["ExitRates"] = st.number_input("Exit rate", min_value=0.0, max_value=1.0, value=float(row["ExitRates"]), format="%.4f")
-    with c:
-        visitors = ["Returning_Visitor", "New_Visitor", "Other"]
-        row["VisitorType"] = st.selectbox("Visitor type", visitors, index=visitors.index(row["VisitorType"]))
-        months = ["Feb", "Mar", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        row["Month"] = st.selectbox("Month", months, index=months.index(row["Month"]))
-        row["Weekend"] = st.checkbox("Weekend", value=bool(row["Weekend"]))
-    with st.expander("Other model inputs"):
-        for key in ["Administrative_Duration", "Informational_Duration", "SpecialDay"]:
-            row[key] = st.number_input(key, min_value=0.0, value=float(row[key]))
-        for key in ["OperatingSystems", "Browser", "Region", "TrafficType"]:
-            row[key] = st.number_input(key, min_value=1, value=int(row[key]))
-    submitted = st.form_submit_button("Predict purchase probability", type="primary")
+tab_predict, tab_how, tab_results, tab_about = st.tabs(
+    ["🔮  Predict", "⚙️  How it works", "📊  Results", "📄  About"]
+)
 
-if submitted:
-    p = float(model.predict_proba(pd.DataFrame([row]))[0, 1])
-    st.metric("Estimated purchase probability", f"{p:.1%}")
-    st.write(f"Observed outcome for the original example: **{'purchase' if actual else 'no purchase'}**. If you edited inputs, that outcome does not describe your hypothetical session.")
-    st.progress(p)
 
-st.divider()
-st.subheader("How to interpret this demo")
-st.write(f"The chosen model is **{report['chosen_model']}**. It was selected by cross-validated average precision using training data only. Its holdout average precision is **{report['results'][report['chosen_model']]['test']['average_precision']:.3f}**; the holdout purchase rate is **{report['positive_rate']:.1%}**.")
-st.info("These are completed-session records from one historical dataset. A real-time intervention would require training and validating on partial sessions, then testing any action in a controlled experiment. The prediction is not evidence that an intervention will cause a purchase.")
+# ───────────────────────────── Predict ─────────────────────────────
+with tab_predict:
+    st.markdown(
+        "Pick a **held-out** shopping session — one the model never saw while training — "
+        "and estimate how likely that visitor was to buy."
+    )
+
+    idx = st.selectbox(
+        "Choose a held-out example session",
+        range(len(examples)),
+        index=26,
+        format_func=lambda i: f"Example {i + 1}",
+    )
+    row = examples.iloc[idx].copy()
+    actual = bool(row.pop("Revenue"))
+
+    left, right = st.columns([1, 1.15], gap="large")
+
+    with left:
+        st.markdown('<div class="ss-card"><h4>What this visitor did</h4>', unsafe_allow_html=True)
+        mins = row["ProductRelated_Duration"] / 60
+        for label, value in [
+            ("Product pages viewed", f"{int(row['ProductRelated'])}"),
+            ("Time on product pages", f"{mins:.1f} min"),
+            ("Bounce rate", f"{row['BounceRates'] * 100:.1f}%"),
+            ("Exit rate", f"{row['ExitRates'] * 100:.1f}%"),
+            ("Visitor type", str(row["VisitorType"]).replace("_", " ")),
+            ("Month", str(row["Month"])),
+            ("Weekend", "Yes" if row["Weekend"] else "No"),
+        ]:
+            st.markdown(
+                f'<div class="ss-kv"><span>{label}</span><span>{value}</span></div>',
+                unsafe_allow_html=True,
+            )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        with st.expander("✏️  Change the session (optional)"):
+            st.caption(
+                "Edits create a hypothetical visitor. The recorded outcome below belongs to the "
+                "original session and no longer describes it."
+            )
+            # Keying the form by example makes switching sessions clear any previous edits.
+            with st.form(f"predict_{idx}"):
+                c1, c2 = st.columns(2)
+                with c1:
+                    row["ProductRelated"] = st.number_input(
+                        "Product pages viewed", min_value=0, value=int(row["ProductRelated"]))
+                    row["ProductRelated_Duration"] = st.number_input(
+                        "Time on product pages (sec)", min_value=0.0,
+                        value=float(row["ProductRelated_Duration"]))
+                    row["Administrative"] = st.number_input(
+                        "Administrative pages", min_value=0, value=int(row["Administrative"]))
+                    row["Informational"] = st.number_input(
+                        "Informational pages", min_value=0, value=int(row["Informational"]))
+                with c2:
+                    row["BounceRates"] = st.number_input(
+                        "Bounce rate", min_value=0.0, max_value=1.0,
+                        value=float(row["BounceRates"]), format="%.4f")
+                    row["ExitRates"] = st.number_input(
+                        "Exit rate", min_value=0.0, max_value=1.0,
+                        value=float(row["ExitRates"]), format="%.4f")
+                    visitors = ["Returning_Visitor", "New_Visitor", "Other"]
+                    row["VisitorType"] = st.selectbox(
+                        "Visitor type", visitors, index=visitors.index(row["VisitorType"]))
+                    months = ["Feb", "Mar", "May", "June", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+                    row["Month"] = st.selectbox("Month", months, index=months.index(row["Month"]))
+                row["Weekend"] = st.checkbox("Weekend", value=bool(row["Weekend"]))
+                for key in ["Administrative_Duration", "Informational_Duration", "SpecialDay"]:
+                    row[key] = st.number_input(key, min_value=0.0, value=float(row[key]))
+                for key in ["OperatingSystems", "Browser", "Region", "TrafficType"]:
+                    row[key] = st.number_input(key, min_value=1, value=int(row[key]))
+                st.form_submit_button("Apply changes", type="secondary")
+
+    with right:
+        p = float(model.predict_proba(pd.DataFrame([row]))[0, 1])
+        colour = TEAL if p >= 0.5 else ("#b58324" if p >= 0.25 else MUTED)
+        st.markdown(
+            f'<div class="ss-card"><h4>Estimated chance of buying</h4>'
+            f'<div class="ss-score" style="color:{colour}">{p:.0%}</div>'
+            f'<div class="ss-bar"><i style="width:{max(p * 100, 1.5):.1f}%;background:{colour}"></i></div>'
+            f'<div class="ss-note">0% &nbsp;—&nbsp; certainly no purchase &nbsp;·&nbsp; '
+            f'100% &nbsp;—&nbsp; certainly a purchase</div></div>',
+            unsafe_allow_html=True,
+        )
+
+        predicted_buy = p >= 0.5
+        if predicted_buy and actual:
+            st.markdown(
+                '<div class="ss-flag hit"><b>✅ The model caught a buyer.</b><br>'
+                "It scored this session as high intent, and this visitor really did buy.</div>",
+                unsafe_allow_html=True,
+            )
+        elif not predicted_buy and not actual:
+            st.markdown(
+                '<div class="ss-flag miss"><b>✅ Correctly set aside.</b><br>'
+                "Low score, and this visitor did not buy. The analyst never has to open it.</div>",
+                unsafe_allow_html=True,
+            )
+        elif predicted_buy and not actual:
+            st.markdown(
+                '<div class="ss-flag look"><b>🔎 Worth investigating.</b><br>'
+                "This visitor behaved like a buyer but left with nothing. "
+                "<b>This is exactly the session SessionSignal exists to surface</b> — "
+                "something may have gone wrong for them.</div>",
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                '<div class="ss-flag miss"><b>↪️ A quiet buyer the model missed.</b><br>'
+                "Low score, but this visitor did buy. No model catches every case — "
+                "the reported metrics summarise all 2,441 test sessions.</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.markdown(
+            f'<div class="ss-note">Recorded outcome for the original session: '
+            f'<b>{"purchase" if actual else "no purchase"}</b>. '
+            f"A score is an estimate of likelihood, not a statement about this individual.</div>",
+            unsafe_allow_html=True,
+        )
+
+
+# ──────────────────────────── How it works ────────────────────────────
+with tab_how:
+    st.subheader("How SessionSignal makes a prediction")
+    st.markdown(
+        "The model reads **how someone browsed** and returns one number: the estimated chance "
+        "that the visit ended in a purchase. It never sees the shopping cart or any money."
+    )
+
+    c1, c2 = st.columns(2, gap="large")
+    with c1:
+        st.markdown('<div class="ss-card"><h4>The four steps</h4>', unsafe_allow_html=True)
+        for n, text in [
+            ("1", "<b>Clean the data.</b> Remove 125 duplicate rows, leaving 12,205 real visits."),
+            ("2", "<b>Drop <code>PageValues</code>.</b> It is calculated from revenue, so keeping it "
+                  "would be letting the model peek at the answer."),
+            ("3", "<b>Split 80/20.</b> 9,764 visits to learn from, 2,441 locked away for testing."),
+            ("4", "<b>Train, tune, then test once.</b> Everything is chosen using training data only."),
+        ]:
+            st.markdown(f'<div class="ss-step"><b>{n}</b><span>{text}</span></div>',
+                        unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with c2:
+        st.markdown('<div class="ss-card"><h4>What it looks at</h4>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="ss-note">'
+            "<b>Browsing depth</b> — how many product, informational and account pages were opened.<br><br>"
+            "<b>Time spent</b> — seconds on each kind of page.<br><br>"
+            "<b>Engagement quality</b> — bounce rate and exit rate from the store's analytics.<br><br>"
+            "<b>Context</b> — new or returning visitor, month, weekend, device, region, traffic source."
+            "</div></div>",
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+    st.subheader("Why we do not use accuracy")
+    st.markdown(
+        f"Only **{report['positive_rate']:.1%}** of visits end in a purchase. A lazy model that always "
+        f"says *“nobody will buy”* scores **{res['Always no purchase']['test']['accuracy']:.1%} accuracy** "
+        "— and finds **zero** buyers. So we judge models on **average precision**, which rewards putting "
+        "real buyers at the top of the ranking."
+    )
+
+    st.subheader("What it cannot do")
+    st.markdown(
+        "- It does **not** explain *why* a visitor left.\n"
+        "- It does **not** prove the store will earn more money.\n"
+        "- It works on **completed** visits only — not live, while someone is still shopping."
+    )
+
+
+# ────────────────────────────── Results ──────────────────────────────
+with tab_results:
+    st.subheader("We compared four models on exactly the same test data")
+
+    order = ["Always no purchase", "Logistic regression", "Random forest",
+             "Gradient boosting", "Random forest tuned"]
+    nice = {"Always no purchase": "Always say “no purchase” (baseline)",
+            "Random forest tuned": "Random forest, tuned  ← chosen"}
+    best = max(res[m]["test"]["average_precision"] for m in order)
+    for m in order:
+        ap = res[m]["test"]["average_precision"]
+        is_chosen, is_base = m == chosen, m == "Always no purchase"
+        bar = "#8da2ae" if is_base else TEAL
+        st.markdown(
+            f'<div style="display:grid;grid-template-columns:17rem 1fr 4rem;gap:.8rem;'
+            f'align-items:center;margin:.45rem 0;font-weight:{700 if is_chosen else 400}">'
+            f"<span>{nice.get(m, m)}</span>"
+            f'<span class="ss-bar" style="margin:0"><i style="width:{ap / best * 100:.1f}%;'
+            f'background:{bar}"></i></span>'
+            f"<span>{ap:.3f}</span></div>",
+            unsafe_allow_html=True,
+        )
+    st.caption("Average precision on the same untouched 2,441-session test set. Higher is better.")
+
+    st.divider()
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Buyers in the top-scored 10%", f"{test['top_decile_purchase_rate']:.1%}")
+    c2.metric("Buyers if picked at random", f"{report['positive_rate']:.1%}")
+    c3.metric("Improvement", f"{test['top_decile_lift']:.2f}×")
+    st.markdown(
+        '<div class="ss-flag hit">An analyst reviewing the model’s top 10% finds '
+        f"<b>{test['top_decile_lift']:.2f}× more real buyers</b> than reviewing sessions at random "
+        "— the same hour of work, far better targeted.</div>",
+        unsafe_allow_html=True,
+    )
+
+    st.divider()
+    st.subheader("What the data looks like")
+    st.image(str(OUT / "eda.png"), width="stretch")
+    st.caption(
+        "New visitors bought in 24.9% of sessions versus 13.9% for returning visitors. "
+        "November reached 25.4%; February was 1.6%. These are associations, not causes."
+    )
+
+    with st.expander("Full metrics for every model"):
+        st.dataframe(
+            pd.DataFrame({
+                "Model": [nice.get(m, m) for m in order],
+                "Avg. precision": [f"{res[m]['test']['average_precision']:.3f}" for m in order],
+                "ROC AUC": [f"{res[m]['test']['roc_auc']:.3f}" for m in order],
+                "Accuracy": [f"{res[m]['test']['accuracy']:.1%}" for m in order],
+                "Precision": [f"{res[m]['test']['precision']:.1%}" for m in order],
+                "Recall": [f"{res[m]['test']['recall']:.1%}" for m in order],
+            }),
+            hide_index=True, width="stretch",
+        )
+        st.caption("Threshold metrics use a 0.5 cutoff. Full report: `artifacts/results.json`.")
+
+
+# ─────────────────────────────── About ───────────────────────────────
+with tab_about:
+    st.subheader("The problem")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Global ecommerce, 2025", "$6.42T", help="eMarketer — 20.5% of all retail sales")
+    c2.metric("Average cart abandonment", "70.22%", help="Baymard Institute — 50 studies, 2006–2025")
+    c3.metric("Visits here with no purchase", "84.5%", help="UCI Online Shoppers dataset")
+    st.markdown(
+        "Most people who visit an online store leave without buying, and that has barely changed "
+        "in twenty years. Stores cannot hand-review every lost visit — **analyst attention is the "
+        "scarce resource.** SessionSignal ranks completed visits so the team knows which ones to "
+        "open first."
+    )
+
+    st.divider()
+    st.subheader("The dataset")
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Shopping sessions", f"{report['source_rows']:,}")
+    c2.metric("Used after cleaning", f"{report['rows_used']:,}")
+    c3.metric("Ended in a purchase", f"{report['positive_rate']:.1%}")
+    st.markdown(
+        "Sakar, C. & Kastro, Y. (2018). *Online Shoppers Purchasing Intention Dataset*, "
+        "UCI Machine Learning Repository ([DOI 10.24432/C5F88Q](https://doi.org/10.24432/C5F88Q)), "
+        "published under CC BY 4.0. Each row is one completed visit to an online store."
+    )
+
+    st.divider()
+    st.subheader("The team")
+    st.dataframe(
+        pd.DataFrame(
+            [["6622782298", "Sirawich Narakulsookpipat", "Problem research and framing"],
+             ["6622780342", "Chaitawat Boonkitticharoen", "Dataset audit and target definition"],
+             ["6622782215", "Bhuchi Kumprakob", "Exploratory data analysis"],
+             ["6622780276", "Nonthaphat Chuathong", "Evaluation design and model selection"],
+             ["6622770657", "Kamin Sirisuwapong", "PyCaret comparison and hyperparameter tuning"],
+             ["6622772455", "Poonnawit Wongprateepwilai", "Results analysis and business solution"],
+             ["6622790267", "Choltawat Jullakasevi", "Streamlit app, demonstration and limitations"]],
+            columns=["Student ID", "Name", "Main contribution"],
+        ),
+        hide_index=True, width="stretch",
+    )
+
+    st.divider()
+    st.subheader("Honest limitations")
+    st.info(
+        "These are completed-session records from one historical dataset. A real-time version would "
+        "need timestamped partial sessions, validation on a later time period, and a controlled A/B "
+        "test before anyone could claim it increases sales. The model finds associations — it does "
+        "not explain why a visitor left.",
+        icon="⚠️",
+    )
+    st.caption(
+        f"Model in use: **{chosen}** · held-out average precision **{test['average_precision']:.3f}** · "
+        f"ROC AUC **{test['roc_auc']:.3f}** · trained with seed 42 and reproducible via `train.py`."
+    )

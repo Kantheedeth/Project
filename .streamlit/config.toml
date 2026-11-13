@@ -1,0 +1,10 @@
+# Pin the look so the demo renders identically on any machine or OS theme.
+[theme]
+base = "light"
+primaryColor = "#008e87"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f8f8"
+textColor = "#122434"
+
+[browser]
+gatherUsageStats = false

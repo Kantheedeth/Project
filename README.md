@@ -27,9 +27,28 @@ python3.11 -m venv .venv
 .venv/bin/streamlit run app.py
 ```
 
-Open the local URL printed by Streamlit. Select a held-out example and click **Predict purchase probability**. The app shows the recorded outcome for the original example so judges can compare prediction and reality.
+Open the local URL printed by Streamlit. The app has four tabs:
 
-The **15-slide** deck is [presentation.html](presentation.html); open it in a browser and use the arrow keys or click to advance. Browser print produces a PDF. The submission is a **YouTube video, 10–15 minutes at 1× speed**, with the demonstration included; the run of show is timed to **14:00**. Speaker allocation, Thai speaker notes, the fixed demo script, recording instructions and a rehearsal checklist are in [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md).
+- **Predict** — pick a held-out session, see what that visitor did, and get an estimated chance of buying. The app labels the outcome automatically: *caught a buyer*, *correctly set aside*, or **worth investigating** when a high-scoring session did not convert.
+- **How it works** — the four modelling steps, what the model looks at, and why accuracy is the wrong measure.
+- **Results** — model comparison on the same held-out test set, the 2.79× top-decile lift, and the EDA charts.
+- **About** — the problem with sources, the dataset, the team, and the honest limitations.
+
+The theme is pinned in `.streamlit/config.toml` so the app renders identically on any machine, which matters when recording.
+
+For the demonstration use examples **27** (score 68%, bought), **9** (1%, did not buy) and **8** (64%, did **not** buy — the session an analyst should investigate).
+
+## Presentation files
+
+| File | What it is |
+|---|---|
+| [presentation.html](presentation.html) | The 15-slide deck. Open in a browser, arrow keys to advance. |
+| [SessionSignal.pptx](SessionSignal.pptx) | The same deck as editable PowerPoint, for import into Canva. |
+| [SessionSignal_slides.pdf](SessionSignal_slides.pdf) | Flattened slides, as a presenting backup. |
+| [SessionSignal_Project_Summary.pdf](SessionSignal_Project_Summary.pdf) | Plain-language summary of the whole project. |
+| [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md) | Run of show, speaker allocation, Thai notes, demo script, recording steps. |
+
+The submission is a **YouTube video, 10–15 minutes at 1× speed**, with the demonstration included; the run of show is timed to **14:00**.
 
 The already trained model and results are in `artifacts/`. You can run the app without retraining after installing dependencies. Results are deterministic with seed 42, subject to library and platform versions.
 
