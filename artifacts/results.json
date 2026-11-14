@@ -31,7 +31,11 @@
           ]
         ],
         "top_decile_purchase_rate": 0.16326530612244897,
-        "top_decile_lift": 1.0432738540442354
+        "top_decile_lift": 1.0432738540442354,
+        "average_precision_ci95": [
+          0.1421446128635805,
+          0.17083162638263008
+        ]
       }
     },
     "Logistic regression": {
@@ -57,7 +61,11 @@
           ]
         ],
         "top_decile_purchase_rate": 0.37142857142857144,
-        "top_decile_lift": 2.373448017950636
+        "top_decile_lift": 2.373448017950636,
+        "average_precision_ci95": [
+          0.2923215053461398,
+          0.37537762518534523
+        ]
       }
     },
     "Random forest": {
@@ -83,7 +91,11 @@
           ]
         ],
         "top_decile_purchase_rate": 0.43673469387755104,
-        "top_decile_lift": 2.79075755956833
+        "top_decile_lift": 2.79075755956833,
+        "average_precision_ci95": [
+          0.3299355839561553,
+          0.4195346296106819
+        ]
       }
     },
     "Gradient boosting": {
@@ -109,7 +121,11 @@
           ]
         ],
         "top_decile_purchase_rate": 0.4489795918367347,
-        "top_decile_lift": 2.869003098621648
+        "top_decile_lift": 2.869003098621648,
+        "average_precision_ci95": [
+          0.33024391070928977,
+          0.4193507571871268
+        ]
       }
     },
     "Random forest tuned": {
@@ -136,8 +152,128 @@
           ]
         ],
         "top_decile_purchase_rate": 0.43673469387755104,
-        "top_decile_lift": 2.79075755956833
+        "top_decile_lift": 2.79075755956833,
+        "average_precision_ci95": [
+          0.33493266506973546,
+          0.42334695726926463
+        ]
       }
     }
-  }
+  },
+  "runner_up": "Random forest",
+  "chosen_vs_runner_up": {
+    "mean": 0.0028051619511564054,
+    "ci95": [
+      -0.007976250489568609,
+      0.01399070927708993
+    ],
+    "win_rate": 0.6765,
+    "significant": false
+  },
+  "thresholds": {
+    "note": "0.5 is arbitrary for a 15.6% positive rate; these are chosen on the test set and would need a validation split before operational use.",
+    "best_f1": {
+      "threshold": 0.4456045387092572,
+      "precision": 0.34492753623188405,
+      "recall": 0.6230366492146597,
+      "f1": 0.4440298507462687
+    },
+    "review_top_10pct": {
+      "threshold": 0.6068731527924816,
+      "precision": 0.43673469387755104,
+      "recall": 0.2801047120418848,
+      "sessions_flagged": 245
+    }
+  },
+  "page_values_ablation": {
+    "without_page_values_ap": 0.3739306475904874,
+    "without_page_values_roc_auc": 0.7874838850761184,
+    "without_page_values_lift": 2.79075755956833,
+    "with_page_values_ap": 0.7229793773779721,
+    "with_page_values_roc_auc": 0.9279399088155945,
+    "with_page_values_lift": 4.772977882252378,
+    "note": "PageValues is derived from revenue. Keeping it roughly doubles measured performance, which is why we treat it as leakage rather than a win."
+  },
+  "feature_importance": [
+    {
+      "feature": "Month",
+      "drop_in_ap": 0.060314338145878645,
+      "std": 0.01619259249399784
+    },
+    {
+      "feature": "ProductRelated_Duration",
+      "drop_in_ap": 0.05093117283378801,
+      "std": 0.013683197330785522
+    },
+    {
+      "feature": "ExitRates",
+      "drop_in_ap": 0.05086797890708833,
+      "std": 0.013542461319301296
+    },
+    {
+      "feature": "BounceRates",
+      "drop_in_ap": 0.02117895586971753,
+      "std": 0.006833430181549546
+    },
+    {
+      "feature": "VisitorType",
+      "drop_in_ap": 0.020662564136231833,
+      "std": 0.0031125621822266987
+    },
+    {
+      "feature": "ProductRelated",
+      "drop_in_ap": 0.01583756199191922,
+      "std": 0.00708771745297334
+    },
+    {
+      "feature": "TrafficType",
+      "drop_in_ap": 0.010633172979023959,
+      "std": 0.004320770116374092
+    },
+    {
+      "feature": "OperatingSystems",
+      "drop_in_ap": 0.009142630096955939,
+      "std": 0.0025863419994989027
+    },
+    {
+      "feature": "Administrative",
+      "drop_in_ap": 0.008947954213000342,
+      "std": 0.0043010499905988785
+    },
+    {
+      "feature": "Administrative_Duration",
+      "drop_in_ap": 0.0036335134320778896,
+      "std": 0.0042174192676130325
+    },
+    {
+      "feature": "Region",
+      "drop_in_ap": 0.0029800838022742636,
+      "std": 0.0033728700053122012
+    },
+    {
+      "feature": "Weekend",
+      "drop_in_ap": 0.0013050621252268467,
+      "std": 0.0031509883875771496
+    },
+    {
+      "feature": "Browser",
+      "drop_in_ap": 0.0006855231558163033,
+      "std": 0.0015780112293416314
+    },
+    {
+      "feature": "SpecialDay",
+      "drop_in_ap": -0.001045544423122624,
+      "std": 0.004158352509505268
+    },
+    {
+      "feature": "Informational",
+      "drop_in_ap": -0.003169698770015905,
+      "std": 0.0014802619590969545
+    },
+    {
+      "feature": "Informational_Duration",
+      "drop_in_ap": -0.003995204972569976,
+      "std": 0.0016684569928835243
+    }
+  ]
 }

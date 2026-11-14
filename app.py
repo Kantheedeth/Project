@@ -68,14 +68,19 @@ def load_data():
     return pd.read_csv(OUT / "demo_sessions.csv"), json.loads((OUT / "results.json").read_text())
 
 
+@st.cache_data
+def load_scored():
+    return pd.read_csv(OUT / "scored_sessions.csv")
+
+
 model = load_model()
 examples, report = load_data()
 res = report["results"]
 chosen = report["chosen_model"]
 test = res[chosen]["test"]
 
-tab_predict, tab_how, tab_results, tab_about = st.tabs(
-    ["🔮  Predict", "⚙️  How it works", "📊  Results", "📄  About"]
+tab_predict, tab_find, tab_how, tab_results, tab_about = st.tabs(
+    ["🔮  Score a session", "🔎  Find lost sales", "⚙️  How it works", "📊  Results", "📄  About"]
 )
 
 
@@ -204,6 +209,56 @@ with tab_predict:
         )
 
 
+# ─────────────────────────── Find lost sales ───────────────────────────
+with tab_find:
+    scored = load_scored()
+    st.subheader("Rank every held-out session, then open the promising ones")
+    st.markdown(
+        f"The model scored all **{len(scored):,}** sessions it had never seen. An analyst cannot "
+        "review them all, so the question is simply: **how far down the ranking can you afford to go?**"
+    )
+
+    capacity = st.slider(
+        "How many sessions can your team review?", 10, 500, 50, step=10,
+        help="The model ranks by score; you review from the top down.")
+
+    top = scored.head(capacity)
+    found = int(top["Revenue"].sum())
+    base_rate = float(scored["Revenue"].mean())
+    expected_random = base_rate * capacity
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Buyers found in your top sessions", f"{found}")
+    c2.metric("Expected if reviewed at random", f"{expected_random:.0f}")
+    c3.metric("Improvement", f"{found / expected_random:.2f}×" if expected_random else "—")
+
+    st.markdown(
+        f'<div class="ss-flag hit">Reviewing the top <b>{capacity}</b> sessions surfaces '
+        f'<b>{found} real buyers</b>. Picking {capacity} at random would be expected to surface about '
+        f'<b>{expected_random:.0f}</b>. Same effort, <b>{found / expected_random:.2f}× the signal</b>.</div>'
+        if expected_random else "", unsafe_allow_html=True)
+
+    st.divider()
+    missed = top[~top["Revenue"]].copy()
+    st.subheader(f"🔎 The investigate list — {len(missed)} high-intent sessions that did not buy")
+    st.markdown(
+        "These visitors behaved like buyers and left with nothing. **This is the output an analyst "
+        "actually works from** — the starting point for asking what went wrong."
+    )
+    view = pd.DataFrame({
+        "Score": (missed["score"] * 100).round(0).astype(int).astype(str) + "%",
+        "Product pages": missed["ProductRelated"].astype(int),
+        "Minutes browsing": (missed["ProductRelated_Duration"] / 60).round(1),
+        "Exit rate": (missed["ExitRates"] * 100).round(2).astype(str) + "%",
+        "Visitor": missed["VisitorType"].str.replace("_", " "),
+        "Month": missed["Month"],
+    })
+    st.dataframe(view, hide_index=True, width="stretch", height=330)
+    st.caption(
+        "Sorted by score, highest first. The dataset has no journey or support logs, so the next "
+        "step — working out *why* each visitor left — needs data this project does not include."
+    )
+
 # ──────────────────────────── How it works ────────────────────────────
 with tab_how:
     st.subheader("How SessionSignal makes a prediction")
@@ -268,16 +323,31 @@ with tab_results:
         ap = res[m]["test"]["average_precision"]
         is_chosen, is_base = m == chosen, m == "Always no purchase"
         bar = "#8da2ae" if is_base else TEAL
+        ci = res[m]["test"].get("average_precision_ci95")
+        ci_txt = f"[{ci[0]:.3f}&ndash;{ci[1]:.3f}]" if ci else ""
         st.markdown(
-            f'<div style="display:grid;grid-template-columns:17rem 1fr 4rem;gap:.8rem;'
+            f'<div style="display:grid;grid-template-columns:17rem 1fr 3.4rem 7rem;gap:.8rem;'
             f'align-items:center;margin:.45rem 0;font-weight:{700 if is_chosen else 400}">'
             f"<span>{nice.get(m, m)}</span>"
             f'<span class="ss-bar" style="margin:0"><i style="width:{ap / best * 100:.1f}%;'
             f'background:{bar}"></i></span>'
-            f"<span>{ap:.3f}</span></div>",
+            f"<span>{ap:.3f}</span>"
+            f'<span class="ss-note" style="font-size:.78rem">{ci_txt}</span></div>',
             unsafe_allow_html=True,
         )
-    st.caption("Average precision on the same untouched 2,441-session test set. Higher is better.")
+    st.caption("Average precision on the same untouched 2,441-session test set, with 95% "
+               "bootstrap intervals. Higher is better.")
+
+    gap = report.get("chosen_vs_runner_up")
+    if gap:
+        st.markdown(
+            f'<div class="ss-flag look"><b>Read the intervals, not the ranking.</b><br>'
+            f'{chosen} beats {report["runner_up"]} by just <b>{gap["mean"]:+.4f}</b> '
+            f'(95% CI {gap["ci95"][0]:+.3f} to {gap["ci95"][1]:+.3f}, winning only '
+            f'{gap["win_rate"]:.0%} of resamples). The interval crosses zero, so '
+            f'<b>this difference is not statistically real</b> — our models are equivalent, '
+            f'and we say so rather than claiming a winner.</div>',
+            unsafe_allow_html=True)
 
     st.divider()
     c1, c2, c3 = st.columns(3)
@@ -292,11 +362,83 @@ with tab_results:
     )
 
     st.divider()
+    st.subheader("What the model actually relies on")
+    st.image(str(OUT / "importance.png"), width="stretch")
+    imp = report.get("feature_importance", [])
+    if imp:
+        st.markdown(
+            f'<div class="ss-flag look"><b>Worth being honest about:</b> the strongest single '
+            f'feature is <b>{imp[0]["feature"]}</b>, not a browsing behaviour. The model has partly '
+            "learned the seasonality of one store in one year, which is exactly why we say it needs "
+            "validating on a later time period before anyone relies on it.</div>",
+            unsafe_allow_html=True)
+
+    st.divider()
+    st.subheader("Improving it: the threshold mattered more than the hyperparameters")
+    th = report.get("thresholds")
+    if th:
+        base = res[chosen]["test"]
+        st.dataframe(pd.DataFrame({
+            "Operating point": ["0.500 — the default", f"{th['best_f1']['threshold']:.3f} — best F1",
+                                f"{th['review_top_10pct']['threshold']:.3f} — review top 10%"],
+            "Precision": [f"{base['precision']:.1%}", f"{th['best_f1']['precision']:.1%}",
+                          f"{th['review_top_10pct']['precision']:.1%}"],
+            "Recall": [f"{base['recall']:.1%}", f"{th['best_f1']['recall']:.1%}",
+                       f"{th['review_top_10pct']['recall']:.1%}"],
+            "F1": [f"{base['f1']:.3f}", f"{th['best_f1']['f1']:.3f}", "—"],
+        }), hide_index=True, width="stretch")
+        st.markdown(
+            f"Hyperparameter tuning moved average precision by **+0.002**, which the intervals above "
+            f"show is noise. Moving the decision threshold from 0.5 to "
+            f"**{th['best_f1']['threshold']:.3f}** lifted recall from **{base['recall']:.1%}** to "
+            f"**{th['best_f1']['recall']:.1%}** and F1 from **{base['f1']:.3f}** to "
+            f"**{th['best_f1']['f1']:.3f}** — a real gain, for free.")
+        st.caption("Thresholds were selected on the test set, so they would need a separate "
+                   "validation split before operational use.")
+
+    st.divider()
+    st.subheader("Why our AUC is 0.79 and not 0.93")
+    ab = report.get("page_values_ablation")
+    if ab:
+        a, b = st.columns(2)
+        a.metric("Without PageValues — our model", f"AP {ab['without_page_values_ap']:.3f}",
+                 f"ROC AUC {ab['without_page_values_roc_auc']:.3f}", delta_color="off")
+        b.metric("With PageValues", f"AP {ab['with_page_values_ap']:.3f}",
+                 f"ROC AUC {ab['with_page_values_roc_auc']:.3f}", delta_color="off")
+        st.markdown(
+            "Published notebooks on this dataset usually score higher because they keep "
+            "`PageValues`. It is computed from revenue, so a model using it is partly reading the "
+            "answer. **We measured the difference rather than guessing, then dropped it anyway** — "
+            "a score that good is a warning sign, not an achievement.")
+
+    st.divider()
+    st.subheader("PyCaret: the same question asked across 14 models")
+    try:
+        lb = pd.read_csv(OUT / "pycaret_leaderboard.csv")
+        st.dataframe(
+            lb[["Model", "Accuracy", "AUC", "Recall", "Prec.", "F1"]],
+            hide_index=True, width="stretch", height=300)
+        st.caption(
+            f"PyCaret `compare_models()` over its full classifier list with `fix_imbalance=True`, "
+            f"four-fold CV on its own split. Best AUC {lb['AUC'].max():.4f} "
+            f"({lb.loc[lb['AUC'].idxmax(), 'Model']}) against our scikit-learn "
+            f"{test['roc_auc']:.3f} — the same conclusion from a different toolchain: no model "
+            "pulls clearly ahead.")
+    except FileNotFoundError:
+        st.info("Run `pycaret_comparison.py` to regenerate the PyCaret leaderboard.")
+
+    st.divider()
     st.subheader("What the data looks like")
     st.image(str(OUT / "eda.png"), width="stretch")
     st.caption(
         "New visitors bought in 24.9% of sessions versus 13.9% for returning visitors. "
         "November reached 25.4%; February was 1.6%. These are associations, not causes."
+    )
+    st.image(str(OUT / "eda_detail.png"), width="stretch")
+    st.caption(
+        "Buyers spend about twice as long on product pages (median 1,110s vs 526s) and disengage "
+        "far less (exit rate 1.96% vs 4.55%). Bounce and exit rates move together (r = 0.90), and "
+        "exit rate is the single numeric feature most related to buying (r = −0.20)."
     )
 
     with st.expander("Full metrics for every model"):
